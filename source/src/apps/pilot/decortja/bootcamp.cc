@@ -27,6 +27,7 @@
 #include <devel/init.hh>
 #include <numeric/random/random.hh>
 #include <protocols/moves/MonteCarlo.hh>
+#include <protocols/moves/MonteCarloStatus.hh>
 #include <protocols/moves/PyMOLMover.hh>
 #include <utility/pointer/owning_ptr.hh>
 #include <utility/vector1.hh>
@@ -75,8 +76,13 @@ int main ( int argc, char ** argv) {
 
 	// Create Copy of pose for speedup (avoids creating/destroying the PoseOP)
 	core::pose::Pose copy_pose;
-	
-	for (int i = 0; i < 100; ++i ) {
+
+    // Acceptance ratio counter
+    int num_accepted_poses = 0;
+    int num_MC_attempts = 100;
+    core::Real total_score_sum = 0;
+
+	for (int i = 0; i < num_MC_attempts; ++i ) {
 		// MC1: residue selection
 		core::Real uniform_random_number = numeric::random::uniform();
 		core::Size randres = static_cast< core::Size> ( uniform_random_number * mypose->total_residue() + 1);	
@@ -86,27 +92,35 @@ int main ( int argc, char ** argv) {
 		core::Real pert2 = numeric::random::gaussian();
 		core::Real orig_phi = mypose->phi( randres);
 		core::Real orig_psi = mypose->psi( randres);
-		mypose->set_phi( randres, orig_phi + pert1);
+        mypose->set_phi( randres, orig_phi + pert1);
 		mypose->set_psi( randres, orig_psi + pert2);
 
-	// Repack
-	core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( *mypose );
-	repack_task->restrict_to_repacking();
-	core::pack::pack_rotamers( *mypose, *sfxn, repack_task );
+        // Repack
+        core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( *mypose );
+        repack_task->restrict_to_repacking();
+        core::pack::pack_rotamers( *mypose, *sfxn, repack_task );
 
-	// Minimize
-	copy_pose = *mypose;
-	atm.run( *mypose, mm, *sfxn, min_opts );
-	*mypose = copy_pose;
+        // Minimize
+        copy_pose = *mypose;
+        atm.run( *mypose, mm, *sfxn, min_opts );
+        *mypose = copy_pose;
 
-	// Accept or reject
-		MC_object_.boltzmann( *mypose);
-		std::cout << "Iteration: " << i << std::endl;
+        // Accept or reject, and store counter of accepted poses
+            MC_object_.boltzmann( *mypose);
+            if( MC_object_.boltzmann( *mypose)) {
+                ++num_accepted_poses;
+            }
+            // DEBUG
+            std::cout << "LAST SCORE BY MC OBJECT: " << MC_object_.last_score() << std::endl;
+
+            total_score_sum+=MC_object_.last_score();
 	}
+    core::Real fraction_MC_accepted = num_accepted_poses / num_MC_attempts;
 
+    std::cout << "Percent Accepted MC attempts: " << fraction_MC_accepted * 100 << "%" << std::endl;
+	std::cout << "Average score: " << total_score_sum / num_MC_attempts << std::endl;
 
-
-	return 0;
+    return 0;
 }
 
 
