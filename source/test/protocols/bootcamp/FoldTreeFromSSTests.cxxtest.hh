@@ -9,7 +9,7 @@
 
 /// @file   test/protocols/match/FoldTreeFromSS.cxxtest.hh
 /// @brief
-/// @author Andrew Leaver-Fay (aleaverfay@gmail.com)
+/// @author Joseph DeCorte (joseph.a.decorte@vanderbilt.edu)
 
 
 // Test headers
@@ -139,19 +139,19 @@ public:
 //        return fold_tree_from_dssp_string( input_dssp_string_);
 //    }
 
-    void test_fold_tree() {
-        std::string input_string = "   EEEEEEE    EEEEEEE         EEEEEEEEE    EEEEEEEEEE   HHHHHH         EEEEEEEEE         EEEEE     ";
-        core::kinematics::FoldTree ft_test_ = protocols::bootcamp::fold_tree_from_dssp_string( input_string);
-        ft_test_.show(std::cout);
-        TS_ASSERT_EQUALS( ft_test_.get_jump_edges().size(), 12);
-    }
-
-//    void test_fold_tree_Pose() {
-//        core::pose::Pose pose_test = create_test_in_pdb_pose();
-//        core::kinematics::FoldTree ft_test = fold_tree_from_ss( pose_test);
-//        ft_test.show( std::cout);
-//        TS_ASSERT( ft_test.check_fold_tree() );
+//    void test_fold_tree() {
+//        std::string input_string = "   EEEEEEE    EEEEEEE         EEEEEEEEE    EEEEEEEEEE   HHHHHH         EEEEEEEEE         EEEEE     ";
+//        core::kinematics::FoldTree ft_test_ = protocols::bootcamp::fold_tree_from_dssp_string( input_string);
+//        ft_test_.show(std::cout);
+//        TS_ASSERT_EQUALS( ft_test_.get_jump_edges().size(), 12);
 //    }
+
+    void test_fold_tree_Pose() {
+        core::pose::Pose pose_test = create_test_in_pdb_pose();
+        core::kinematics::FoldTree ft_test = protocols::bootcamp::fold_tree_from_ss( pose_test);
+        ft_test.show( std::cout);
+        TS_ASSERT( ft_test.check_fold_tree() );
+    }
 
     void test_hello_world() {
         TS_ASSERT( true);

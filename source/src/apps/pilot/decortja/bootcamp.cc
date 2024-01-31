@@ -18,7 +18,9 @@
 #include <core/pack/task/TaskFactory.hh>
 #include <core/pack/pack_rotamers.hh>
 #include <core/pose/Pose.hh> 
+#include <core/pose/variant_util.hh>
 #include <core/scoring/ScoreFunction.hh>
+#include <core/scoring/ScoreType.hh>                        // Needed?
 #include <core/scoring/ScoreFunctionFactory.hh>
 #include <core/scoring/ScoreFunction.fwd.hh>
 #include <core/kinematics/MoveMap.hh>
@@ -26,6 +28,7 @@
 #include <core/optimization/AtomTreeMinimizer.hh>
 #include <devel/init.hh>
 #include <numeric/random/random.hh>
+#include <protocols/bootcamp/fold_tree_from_ss.hh>
 #include <protocols/moves/MonteCarlo.hh>
 #include <protocols/moves/MonteCarloStatus.hh>
 #include <protocols/moves/PyMOLMover.hh>
@@ -36,43 +39,48 @@
 
 ///// Helpers for Main
 // FT_0: Secondary structure identifier from DSSP strings
-utility::vector1< std::pair< core::Size, core::Size > > identify_secondary_structure_spans( std::string const & ss_string )
-{
-    utility::vector1< std::pair< core::Size, core::Size > > ss_boundaries;
-    core::Size strand_start = -1;
-    for ( core::Size ii = 0; ii < ss_string.size(); ++ii ) {
-        if ( ss_string[ ii ] == 'E' || ss_string[ ii ] == 'H'  ) {
-            if ( int( strand_start ) == -1 ) {
-                strand_start = ii;
-            } else if ( ss_string[ii] != ss_string[strand_start] ) {
-                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
-                strand_start = ii;
-            }
-        } else {
-            if ( int( strand_start ) != -1 ) {
-                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
-                strand_start = -1;
-            }
-        }
-    }
-    if ( int( strand_start ) != -1 ) {
-        // last residue was part of a ss-element
-        ss_boundaries.push_back( std::make_pair( strand_start+1, ss_string.size() ));
-    }
-    for ( core::Size ii = 1; ii <= ss_boundaries.size(); ++ii ) {
-        std::cout << "SS Element " << ii << " from residue "
-                  << ss_boundaries[ ii ].first << " to "
-                  << ss_boundaries[ ii ].second << std::endl;
-    }
-    return ss_boundaries;
-}
+//utility::vector1< std::pair< core::Size, core::Size > > identify_secondary_structure_spans( std::string const & ss_string )
+//{
+//    utility::vector1< std::pair< core::Size, core::Size > > ss_boundaries;
+//    core::Size strand_start = -1;
+//    for ( core::Size ii = 0; ii < ss_string.size(); ++ii ) {
+//        if ( ss_string[ ii ] == 'E' || ss_string[ ii ] == 'H'  ) {
+//            if ( int( strand_start ) == -1 ) {
+//                strand_start = ii;
+//            } else if ( ss_string[ii] != ss_string[strand_start] ) {
+//                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+//                strand_start = ii;
+//            }
+//        } else {
+//            if ( int( strand_start ) != -1 ) {
+//                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+//                strand_start = -1;
+//            }
+//        }
+//    }
+//    if ( int( strand_start ) != -1 ) {
+//        // last residue was part of a ss-element
+//        ss_boundaries.push_back( std::make_pair( strand_start+1, ss_string.size() ));
+//    }
+//    for ( core::Size ii = 1; ii <= ss_boundaries.size(); ++ii ) {
+//        std::cout << "SS Element " << ii << " from residue "
+//                  << ss_boundaries[ ii ].first << " to "
+//                  << ss_boundaries[ ii ].second << std::endl;
+//    }
+//    return ss_boundaries;
+//}
 
 int main ( int argc, char ** argv) {
 
-	// Store a protein's filename and pose
+	// Store a protein's filename and pose. TODO: correctly_add_cutpoint_variants() for Pose... need to ad FT first?
 	devel::init( argc, argv);
 	utility::vector1< std::string> filenames = basic::options::option[ basic::options::OptionKeys::in::file::s ].value();
 	core::pose::PoseOP mypose = core::import_pose::pose_from_file( filenames[ 1]);
+
+//    Establishing a bootcamp FoldTree for mypose.
+    mypose->fold_tree( protocols::bootcamp::fold_tree_from_ss( *mypose));
+    mypose->fold_tree().show(std::cout);
+    core::pose::correctly_add_cutpoint_variants( *mypose);
 	
 
 	if ( filenames.size() > 0) {
@@ -84,9 +92,10 @@ int main ( int argc, char ** argv) {
 	}
 
 
-	// Scoring
+	// Scoring:
 	core::scoring::ScoreFunctionOP sfxn = core::scoring::get_score_function();
-	core::Real score = sfxn->score( *mypose);				// mypose is a PoseOP 
+    sfxn->set_weight( core::scoring::linear_chainbreak, 1);
+	core::Real score = sfxn->score( *mypose);				// mypose is a PoseOP
 	std::cout << "Score: " << score << std::endl;
 
 
@@ -96,22 +105,19 @@ int main ( int argc, char ** argv) {
 	// MC3: MC object looping
 	protocols::moves::MonteCarlo MC_object_( *mypose, *sfxn, 0.6);	
 
-
 	// MC_ Start pymol
 	protocols::moves::PyMOLObserverOP the_observer = protocols::moves::AddPyMOLObserver( *mypose, true, 0 );	
 	the_observer->pymol().apply( *mypose);
 
-
-	// Defining the move map
+    // Defining the move map
 	core::kinematics::MoveMap mm;
 	mm.set_bb( true );
 	mm.set_chi( true );
 	core::optimization::MinimizerOptions min_opts( "lbfgs_armijo_atol", 0.01, true );
 	core::optimization::AtomTreeMinimizer atm;
 
-
 	// Create Copy of pose for speedup (avoids creating/destroying the PoseOP)
-	core::pose::Pose copy_pose;
+	core::pose::Pose copy_pose = *mypose;
 
     // Acceptance ratio counter
     int num_accepted_poses = 0;
@@ -121,7 +127,7 @@ int main ( int argc, char ** argv) {
 	for (int i = 0; i < num_MC_attempts; ++i ) {
 		// MC1: residue selection
 		core::Real uniform_random_number = numeric::random::uniform();
-		core::Size randres = static_cast< core::Size> ( uniform_random_number * mypose->total_residue() + 1);	
+		core::Size randres = static_cast< core::Size> ( uniform_random_number * mypose->total_residue() + 1);
 
 		// MC2: adjust phi/psi
 		core::Real pert1 = numeric::random::gaussian();
@@ -138,7 +144,7 @@ int main ( int argc, char ** argv) {
 
         // Minimize
         copy_pose = *mypose;
-        atm.run( *mypose, mm, *sfxn, min_opts );
+        atm.run( copy_pose, mm, *sfxn, min_opts );
         *mypose = copy_pose;
 
         // Accept or reject, and store counter of accepted poses
@@ -146,19 +152,12 @@ int main ( int argc, char ** argv) {
             if( MC_object_.boltzmann( *mypose)) {
                 ++num_accepted_poses;
             }
-            // DEBUG
-            std::cout << "LAST SCORE BY MC OBJECT: " << MC_object_.last_score() << std::endl;
-
             total_score_sum+=MC_object_.last_score();
 	}
     core::Real fraction_MC_accepted = num_accepted_poses / num_MC_attempts;
 
     std::cout << "Percent Accepted MC attempts: " << fraction_MC_accepted * 100 << "%" << std::endl;
 	std::cout << "Average score: " << total_score_sum / num_MC_attempts << std::endl;
-
-
-
-
 
     return 0;
 }

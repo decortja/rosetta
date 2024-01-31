@@ -66,36 +66,63 @@ namespace protocols {
             utility::vector1< std::pair< core::Size, core::Size > > ss_spans_ = identify_secondary_structure_spans( input_dssp_string_);
 
             core::Size jedge_count = 1;
-            // first element: jump to mid of every other SS
             core::kinematics::FoldTree ft;
-            int mid_first_ss = ( ss_spans_[ 1].first + ss_spans_[ 1].second) / 2;
+            core::Size mid_first_ss = floor( ss_spans_[ 1].first + ss_spans_[ 1].second) / 2;
+
+
+            // Jump Edges:
+            // jump edge: mid first element to mid of every other SS
             for( core::Size i = 2; i <= ss_spans_.size(); ++i) {
-                core::Size mid_i_ss = ( ss_spans_[ i].first + ss_spans_[ i].second) / 2;
+                core::Size mid_i_ss = floor( (ss_spans_[ i].first + ss_spans_[ i].second) / 2);
                 ft.add_edge( mid_first_ss, mid_i_ss, jedge_count);
                 ++jedge_count;
             }
 
-            // jumps: mid of first element to mid of every gap
+            // jump edge: mid of first element to mid of every gap
             for( core::Size i = 1; i < ss_spans_.size(); ++i) {
-                core::Size mid_gap_ss = (ss_spans_[ i].second + ss_spans_[ i+1].first) / 2;
-                ft.add_edge( mid_first_ss, mid_gap_ss, jedge_count);
-                ++jedge_count;
+                // make sure a gap actually exists
+                if( ( ss_spans_[ i+1].first - ss_spans_[ i].second) > 1) {
+                    core::Size mid_gap_ss = (ss_spans_[ i].second + ss_spans_[ i+1].first) / 2;
+                    ft.add_edge( mid_first_ss, mid_gap_ss, jedge_count);
+                    ++jedge_count;
+                }
+                else {
+                    continue;
+                }
             }
 
+            // Peptide Edges:
+            // peptide edge: mid of first element to first residue
+            core::Size begin = 1;
+
+            // peptide edge: mid of every SS to end of that SS, mid of every SS to beginning of that SS
             for( core::Size i = 1; i <= ss_spans_.size(); ++i) {
-                // each SS: peptide edge mid to end of that SS, peptide edge mid to beginning of that SS
-                core::Size mid_i_ss = ( ss_spans_[ i].first + ss_spans_[ i].second) / 2;
-                ft.add_edge( mid_i_ss, ss_spans_[ i].second, core::kinematics::Edge::PEPTIDE );
-                ft.add_edge( mid_i_ss, ss_spans_[ i].first, core::kinematics::Edge::PEPTIDE );
+                // Left-direction:
+                core::Size mid_i_ss = (ss_spans_[i].first + ss_spans_[i].second) / 2;
+                if( i == 1) {
+                    ft.add_edge( mid_i_ss, begin, core::kinematics::Edge::PEPTIDE);
+                }
+                else {
+                    ft.add_edge(mid_i_ss, ss_spans_[i].first, core::kinematics::Edge::PEPTIDE);
+                }
+
+                // Right direction:
+                if( i == ss_spans_.size()) {
+                    ft.add_edge( mid_i_ss, input_dssp_string_.length(), core::kinematics::Edge::PEPTIDE);
+                }
+                else {
+                    ft.add_edge(mid_i_ss, ss_spans_[i].second, core::kinematics::Edge::PEPTIDE);
+                }
             }
 
+            // For gaps:
             for( core::Size i = 1; i < ss_spans_.size(); ++i) {
-                core::Size mid_gap_ss = (ss_spans_[ i].second + ss_spans_[ i+1].first) / 2;
-                ft.add_edge( mid_gap_ss, ss_spans_[ i].second, core::kinematics::Edge::PEPTIDE);
-                ft.add_edge( mid_gap_ss, ss_spans_[ i+1].first, core::kinematics::Edge::PEPTIDE);
-
+                if( (ss_spans_[ i+1].first - ss_spans_[ i].second) > 1) {
+                    core::Size mid_gap_ss = (ss_spans_[ i].second + ss_spans_[ i+1].first) / 2;
+                    ft.add_edge( mid_gap_ss, ss_spans_[ i].second + 1, core::kinematics::Edge::PEPTIDE);
+                    ft.add_edge( mid_gap_ss, ss_spans_[ i+1].first - 1, core::kinematics::Edge::PEPTIDE);
+                }
             }
-            ft.add_edge( ss_spans_[ 1].first, 1, core::kinematics::Edge::PEPTIDE);
             return ft;
         }
 

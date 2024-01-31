@@ -667,7 +667,7 @@ static MoverRegistrator< symmetric_docking::SymFoldandDockRbTrialMoverCreator > 
 
 static MoverRegistrator< symmetric_docking::membrane::MPSymDockMoverCreator > reg_MPSymDockMoverCreator;
 
-
+static protocols::bootcamp::BootCampMoverCreator< splice::SpliceCreator > reg_BootCampMoverCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceCreator > reg_SpliceCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceInCreator > reg_SpliceInCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceInTailCreator > reg_SpliceInTailCreator;
