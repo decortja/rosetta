@@ -32,9 +32,42 @@
 #include <utility/pointer/owning_ptr.hh>
 #include <utility/vector1.hh>
 
-int main ( int argc, char ** argv) {
-	std::cout << "Hello World!" << std::endl;
 
+
+///// Helpers for Main
+// FT_0: Secondary structure identifier from DSSP strings
+utility::vector1< std::pair< core::Size, core::Size > > identify_secondary_structure_spans( std::string const & ss_string )
+{
+    utility::vector1< std::pair< core::Size, core::Size > > ss_boundaries;
+    core::Size strand_start = -1;
+    for ( core::Size ii = 0; ii < ss_string.size(); ++ii ) {
+        if ( ss_string[ ii ] == 'E' || ss_string[ ii ] == 'H'  ) {
+            if ( int( strand_start ) == -1 ) {
+                strand_start = ii;
+            } else if ( ss_string[ii] != ss_string[strand_start] ) {
+                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+                strand_start = ii;
+            }
+        } else {
+            if ( int( strand_start ) != -1 ) {
+                ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+                strand_start = -1;
+            }
+        }
+    }
+    if ( int( strand_start ) != -1 ) {
+        // last residue was part of a ss-element
+        ss_boundaries.push_back( std::make_pair( strand_start+1, ss_string.size() ));
+    }
+    for ( core::Size ii = 1; ii <= ss_boundaries.size(); ++ii ) {
+        std::cout << "SS Element " << ii << " from residue "
+                  << ss_boundaries[ ii ].first << " to "
+                  << ss_boundaries[ ii ].second << std::endl;
+    }
+    return ss_boundaries;
+}
+
+int main ( int argc, char ** argv) {
 
 	// Store a protein's filename and pose
 	devel::init( argc, argv);
@@ -56,6 +89,9 @@ int main ( int argc, char ** argv) {
 	core::Real score = sfxn->score( *mypose);				// mypose is a PoseOP 
 	std::cout << "Score: " << score << std::endl;
 
+
+
+    ///////////////////////////////////////////////////////////////////////////
 	// MC: 1 - generate random numbers; 2 - perturb phi/psi; 3 - MC evaluation
 	// MC3: MC object looping
 	protocols::moves::MonteCarlo MC_object_( *mypose, *sfxn, 0.6);	
@@ -119,6 +155,10 @@ int main ( int argc, char ** argv) {
 
     std::cout << "Percent Accepted MC attempts: " << fraction_MC_accepted * 100 << "%" << std::endl;
 	std::cout << "Average score: " << total_score_sum / num_MC_attempts << std::endl;
+
+
+
+
 
     return 0;
 }

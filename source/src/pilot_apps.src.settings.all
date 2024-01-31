@@ -253,7 +253,6 @@ sources = {
 	],
 	"pilot/decortja": {
 		"bootcamp",
-		"bootcamp_jd2",
 	},
 	"pilot/dekim" : [
 		"score_nonlocal_frags",
