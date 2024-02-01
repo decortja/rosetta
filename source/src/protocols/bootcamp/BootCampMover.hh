@@ -17,6 +17,7 @@
 // Unit headers
 #include <protocols/bootcamp/BootCampMover.fwd.hh>
 #include <protocols/moves/Mover.hh>
+#include <protocols/jd2/JobDistributor.hh>
 
 // Protocol headers
 #include <protocols/filters/Filter.fwd.hh>
@@ -24,11 +25,54 @@
 // Core headers
 #include <core/pose/Pose.fwd.hh>
 
+#include <core/import_pose/import_pose.hh>
+#include <core/pack/task/PackerTask.hh>
+#include <core/pack/task/TaskFactory.hh>
+#include <core/pack/pack_rotamers.hh>
+#include <core/pose/variant_util.hh>
+#include <core/scoring/ScoreFunction.hh>
+#include <core/scoring/ScoreType.hh>
+#include <core/scoring/ScoreFunctionFactory.hh>
+#include <core/scoring/ScoreFunction.fwd.hh>
+#include <core/kinematics/MoveMap.hh>
+#include <core/optimization/MinimizerOptions.hh>
+#include <core/optimization/AtomTreeMinimizer.hh>
+#include <core/import_pose/import_pose.hh>
+
 // Basic/Utility headers
 #include <basic/datacache/DataMap.fwd.hh>
+#include <basic/Tracer.hh>
+#include <utility/tag/Tag.hh>
+#include <utility/pointer/memory.hh>
+#include <utility/vector1.hh>
+#include <utility/pointer/owning_ptr.hh>
+#include <basic/options/keys/in.OptionKeys.gen.hh>
+#include <basic/options/option.hh>
+
 //#include <utility/tag/XMLSchemaGeneration.fwd.hh> //transcluded from Mover
 
 #include <basic/citation_manager/UnpublishedModuleInfo.fwd.hh>
+
+// PAREDOWN THIS: TODO
+// Unit headers
+#include <protocols/bootcamp/BootCampMoverCreator.hh>
+
+#include <protocols/bootcamp/fold_tree_from_ss.hh>
+#include <protocols/moves/MonteCarlo.hh>
+#include <protocols/moves/MonteCarloStatus.hh>
+#include <protocols/moves/PyMOLMover.hh>
+
+// XSD Includes
+#include <utility/tag/XMLSchemaGeneration.hh>
+#include <protocols/moves/mover_schemas.hh>
+
+// Citation Manager
+#include <basic/citation_manager/UnpublishedModuleInfo.hh>
+
+// Pare down this list:
+#include <devel/init.hh>
+#include <numeric/random/random.hh>
+
 
 namespace protocols {
 namespace bootcamp {

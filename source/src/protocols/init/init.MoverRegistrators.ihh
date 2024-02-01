@@ -473,6 +473,7 @@ static MoverRegistrator< protein_interface_design::movers::TopologyBrokerMoverCr
 
 static MoverRegistrator< protein_mpnn::ProteinMPNNMoverCreator > reg_ProteinMPNNMoverCreator;
 
+static MoverRegistrator< protocols::bootcamp::BootCampMoverCreator > reg_BootCampMoverCreator;
 // Q //////////////////////////////////////////////////////////////////////////
 static MoverRegistrator< qsar::RenderGridsToKinemageCreator > reg_RenderGridsToKinemageCreator;
 
@@ -667,7 +668,6 @@ static MoverRegistrator< symmetric_docking::SymFoldandDockRbTrialMoverCreator > 
 
 static MoverRegistrator< symmetric_docking::membrane::MPSymDockMoverCreator > reg_MPSymDockMoverCreator;
 
-static protocols::bootcamp::BootCampMoverCreator< splice::SpliceCreator > reg_BootCampMoverCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceCreator > reg_SpliceCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceInCreator > reg_SpliceInCreator;
 static protocols::moves::MoverRegistrator< splice::SpliceInTailCreator > reg_SpliceInTailCreator;
