@@ -80,7 +80,8 @@ sources = {
 	],
 
 	"bootcamp" : [
-		"FoldTreeFromSSTests"
+	    "BootCampMover",
+		"FoldTreeFromSSTests",
 	],
 
 	"branch_angle" : [

@@ -184,9 +184,8 @@ void BootCampMover::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd 
 
 	using namespace utility::tag;
 	AttributeList attlist;
-
-	//here you should write code to describe the XML Schema for the class.  If it has only attributes, simply fill the probided AttributeList.
-
+    /* attlist + XMLSchemaAttribute( "niterations", core::Size, "The number of Monte Carlo iterations to run.")
+    + attribute_for_parse_score_function; */ ////TODO
 	protocols::moves::xsd_type_definition_w_attributes( xsd, mover_name(), "Lab 6: A mover for the monte carlo peptide sampler built in Labs 2 and 4.", attlist );
 }
 
@@ -233,6 +232,7 @@ BootCampMoverCreator::keyname() const
 void BootCampMoverCreator::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd ) const
 {
 	BootCampMover::provide_xml_schema( xsd );
+
 }
 
 /// @brief This mover is unpublished.  It returns decortja as its author.
