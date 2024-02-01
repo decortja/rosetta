@@ -19,15 +19,19 @@
 #include <test/util/pose_funcs.hh>
 #include <test/core/init_util.hh>
 
+
 // Project Headers
 
 
 // Core Headers
+#include <core/types.hh>
 #include <core/pose/Pose.hh>
 #include <core/import_pose/import_pose.hh>
 
 // Utility, etc Headers
 #include <basic/Tracer.hh>
+#include <basic/datacache/DataMap.hh>
+#include <string>
 
 #include <protocols/bootcamp/BootCampMover.hh>
 #include <protocols/moves/MoverFactory.hh>
@@ -49,14 +53,48 @@ public:
 
 	}
 
-    void test_unit_test() {
+    void test_MoverFactory() {
         protocols::moves::MoverOP base_mover_op = protocols::moves::MoverFactory::get_instance()->newMover( "BootCampMover");
         protocols::bootcamp::BootCampMoverOP bcm_op = protocols::bootcamp::BootCampMoverOP( utility::pointer::dynamic_pointer_cast< protocols::bootcamp::BootCampMover > ( base_mover_op ) );
         TS_ASSERT_EQUALS( bcm_op->mover_name() , "BootCampMover");
     }
 
+    void test_get_num_iterations() {
+        protocols::bootcamp::BootCampMover test_bcm;
+        test_bcm.set_num_iterations( 100);
+        TS_ASSERT_EQUALS( test_bcm.get_num_iterations(), 100);
+    }
+
+    void test_get_sfxn() {
+        protocols::bootcamp::BootCampMover test_bcm;
+        core::scoring::ScoreFunctionOP new_sfxn_ = core::scoring::get_score_function();
+        new_sfxn_->set_weight( core::scoring::overlap_chainbreak, 1);
+        test_bcm.set_sfxn(  new_sfxn_);
+        TS_ASSERT_EQUALS( test_bcm.get_sfxn(), new_sfxn_ );
+    }
+
+    // Parser testing
 
 
+    void test_parse_niterations() {
+        std::stringstream test_tag( "<BootCampMover niterations=100 scorefxn=\"testing123\"/>");
+        utility::tag::TagCOP tag = utility::tag::Tag::create( test_tag);
+        basic::datacache::DataMap test_datamap;
+        core::scoring::ScoreFunctionOP test_sfxn = core::scoring::ScoreFunctionOP( new core::scoring::ScoreFunction);
+        test_datamap.add( "scorefxns", "testing123", test_sfxn);
+        protocols::bootcamp::BootCampMover test_bcm;
+        test_bcm.parse_my_tag( tag, test_datamap);
+        TS_ASSERT_EQUALS(test_bcm.get_num_iterations(), 100);
+    }
 
-
+    void test_parse_sfxn() {
+        std::stringstream test_tag( "<BootCampMover niterations=100 scorefxn=\"testing123\"/>");
+        utility::tag::TagCOP tag = utility::tag::Tag::create( test_tag);
+        basic::datacache::DataMap test_datamap;
+        core::scoring::ScoreFunctionOP test_sfxn = core::scoring::ScoreFunctionOP( new core::scoring::ScoreFunction);
+        test_datamap.add( "scorefxns", "testing123", test_sfxn);
+        protocols::bootcamp::BootCampMover test_bcm;
+        test_bcm.parse_my_tag( tag, test_datamap);
+        TS_ASSERT_EQUALS( test_bcm.get_sfxn(), test_sfxn);
+    }
 };

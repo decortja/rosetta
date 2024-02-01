@@ -15,7 +15,7 @@
 #include <protocols/bootcamp/BootCampMover.hh>
 #include <protocols/bootcamp/BootCampMoverCreator.hh>
 #include <protocols/jd2/JobDistributor.hh>
-
+#include <protocols/rosetta_scripts/util.hh>
 
 // Core headers
 #include <core/pose/Pose.hh>
@@ -25,6 +25,7 @@
 #include <core/pose/variant_util.hh>
 #include <core/scoring/ScoreFunction.hh>
 #include <core/scoring/ScoreType.hh>
+// #include <core/scoring/xml_util.hh>
 #include <core/scoring/ScoreFunctionFactory.hh>
 #include <core/scoring/ScoreFunction.fwd.hh>
 #include <core/kinematics/MoveMap.hh>
@@ -35,7 +36,6 @@
 #include <basic/Tracer.hh>
 #include <utility/tag/Tag.hh>
 #include <utility/pointer/memory.hh>
-
 
 // XSD Includes
 #include <utility/tag/XMLSchemaGeneration.hh>
@@ -55,6 +55,7 @@
 #include <protocols/moves/MonteCarlo.hh>
 #include <protocols/moves/MonteCarloStatus.hh>
 #include <protocols/moves/PyMOLMover.hh>
+#include <protocols/rosetta_scripts/util.hh>
 #include <utility/pointer/owning_ptr.hh>
 
 // The header for this class
@@ -71,10 +72,20 @@ namespace bootcamp {
 
 /// @brief Default constructor
 BootCampMover::BootCampMover():
-	protocols::moves::Mover( BootCampMover::mover_name() )
+    protocols::moves::Mover( BootCampMover::mover_name() )
 {
-
+    sfxn_ = core::scoring::get_score_function( core::scoring::linear_chainbreak);
+    num_iterations_ = 100;
 }
+
+///// @brief Constructor
+//BootCampMover::BootCampMover( core::Size n_it, core::scoring::ScoreFunctionOP sf ):
+//        protocols::moves::Mover( BootCampMover::mover_name() ),
+//        num_iterations_( n_it),
+//        sfxn_( sf)
+//{
+//
+//}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Destructor (important for properly forward-declaring smart-pointer members)
@@ -120,10 +131,10 @@ BootCampMover::apply( core::pose::Pose& mypose){
 
             // Acceptance ratio counter
             int num_accepted_poses = 0;
-            int num_MC_attempts = 100;
+//            core::Size num_MC_attempts = num_iterations_;
             core::Real total_score_sum = 0;
 
-            for (int i = 0; i < num_MC_attempts; ++i ) {
+            for (core::Size i = 0; i < num_iterations_; ++i ) {
                 // MC1: residue selection
                 core::Real uniform_random_number = numeric::random::uniform();
                 core::Size randres = static_cast< core::Size> ( uniform_random_number * mypose.total_residue() + 1);
@@ -153,10 +164,10 @@ BootCampMover::apply( core::pose::Pose& mypose){
                 }
                 total_score_sum+=MC_object_.last_score();
             }
-            core::Real fraction_MC_accepted = num_accepted_poses / num_MC_attempts;
+            core::Real fraction_MC_accepted = num_accepted_poses / num_iterations_; // num_MC_attempts;
 
             std::cout << "Percent Accepted MC attempts: " << fraction_MC_accepted * 100 << "%" << std::endl;
-            std::cout << "Average score: " << total_score_sum / num_MC_attempts << std::endl;
+            std::cout << "Average score: " << total_score_sum / num_iterations_ /*num_MC_attempts*/ << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -174,18 +185,36 @@ BootCampMover::show(std::ostream & output) const
 /// @brief parse XML tag (to use this Mover in Rosetta Scripts)
 void
 BootCampMover::parse_my_tag(
-	utility::tag::TagCOP ,
-	basic::datacache::DataMap&
+	utility::tag::TagCOP const tag,
+	basic::datacache::DataMap& datamap
 ) {
+    if ( tag->hasOption("niterations") ) {
+        num_iterations_ = tag->getOption<core::Size>("niterations",1);
+        runtime_assert( num_iterations_ > 0 );
+    }
+    parse_score_function( tag, datamap );
 
 }
+
+/// @brief parse "scorefxn" XML option (can be employed virtually by derived Packing movers)
+void
+BootCampMover::parse_score_function(
+        utility::tag::TagCOP const tag,
+        basic::datacache::DataMap const & datamap
+)
+{
+    core::scoring::ScoreFunctionOP new_score_function( protocols::rosetta_scripts::parse_score_function( tag, datamap ) );
+    if ( new_score_function == nullptr ) return;
+    sfxn_ = new_score_function;
+}
+
 void BootCampMover::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd )
 {
-
 	using namespace utility::tag;
 	AttributeList attlist;
-    /* attlist + XMLSchemaAttribute( "niterations", core::Size, "The number of Monte Carlo iterations to run.")
-    + attribute_for_parse_score_function; */ ////TODO
+    attlist + XMLSchemaAttribute( "niterations", xsct_non_negative_integer, "The number of Monte Carlo iterations to run.")
+    + XMLSchemaAttribute( "name", xsct_string_cslist, "The name of the mover (BootCampMover).");
+    core::scoring::attributes_for_parse_score_function_w_description( attlist, "The score function for scoring the MC iterations.");
 	protocols::moves::xsd_type_definition_w_attributes( xsd, mover_name(), "Lab 6: A mover for the monte carlo peptide sampler built in Labs 2 and 4.", attlist );
 }
 
@@ -213,7 +242,22 @@ std::string BootCampMover::mover_name() {
 	return "BootCampMover";
 }
 
+// Getters and setters for iterations, variables:
+core::Size BootCampMover::get_num_iterations() const {
+    return num_iterations_;
+}
 
+void BootCampMover::set_num_iterations( core::Size num_iterations_new_) {
+    num_iterations_ = num_iterations_new_;
+}
+
+core::scoring::ScoreFunctionOP BootCampMover::get_sfxn() const {
+    return sfxn_;
+}
+
+void BootCampMover::set_sfxn( core::scoring::ScoreFunctionOP sfxn_new_) {
+    sfxn_ = sfxn_new_;
+}
 
 /////////////// Creator ///////////////
 

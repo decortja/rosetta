@@ -18,6 +18,7 @@
 #include <protocols/bootcamp/BootCampMover.fwd.hh>
 #include <protocols/moves/Mover.hh>
 #include <protocols/jd2/JobDistributor.hh>
+#include <protocols/rosetta_scripts/util.hh>
 
 // Protocol headers
 #include <protocols/filters/Filter.fwd.hh>
@@ -43,6 +44,7 @@
 #include <basic/datacache/DataMap.fwd.hh>
 #include <basic/Tracer.hh>
 #include <utility/tag/Tag.hh>
+#include <utility/tag/XMLSchemaGeneration.hh>
 #include <utility/pointer/memory.hh>
 #include <utility/vector1.hh>
 #include <utility/pointer/owning_ptr.hh>
@@ -88,6 +90,7 @@ public:
 
 	/// @brief Default constructor
 	BootCampMover();
+//    BootCampMover( core::Size n_it, core::scoring::ScoreFunctionOP sf );
 
 	/// @brief Destructor (important for properly forward-declaring smart-pointer members)
 	~BootCampMover() override;
@@ -118,8 +121,14 @@ public:
 	void
 	parse_my_tag(
 		utility::tag::TagCOP tag,
-		basic::datacache::DataMap & data ) override;
+		basic::datacache::DataMap& datamap ) override;
 
+    /// @brief parse "scorefxn" XML option (can be employed virtually by derived Packing movers)
+    void
+    parse_score_function(
+            utility::tag::TagCOP const tag,
+            basic::datacache::DataMap const & datamap
+    );
 	//BootCampMover & operator=( BootCampMover const & src );
 
 	/// @brief required in the context of the parser/scripting scheme
@@ -141,6 +150,13 @@ public:
 	void
 	provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd );
 
+    // Getters and setters for iterations, variables:
+    core::Size get_num_iterations() const;
+    void set_num_iterations( core::Size num_iterations_new_);
+
+    core::scoring::ScoreFunctionOP get_sfxn() const;
+    void set_sfxn( core::scoring::ScoreFunctionOP sfxn_new_);
+
 public: //Function overrides needed for the citation manager:
 
 	/// @brief This mover is unpublished.  It returns decortja as its author.
@@ -149,7 +165,8 @@ public: //Function overrides needed for the citation manager:
 private: // methods
 
 private: // data
-
+    core::scoring::ScoreFunctionOP sfxn_;
+    core::Size num_iterations_;
 };
 
 std::ostream &
