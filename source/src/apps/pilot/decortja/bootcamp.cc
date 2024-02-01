@@ -39,10 +39,11 @@
 #include <protocols/jd2/JobDistributor.hh>
 #include <protocols/bootcamp/BootCampMover.hh>
 
-
-protocols::bootcamp::BootCampMoverOP boot_camp_mover( new protocols::bootcamp::BootCampMover());
-protocols::jd2::JobDistributor::get_instance()->go( boot_camp_mover);
-
+int main( int argc, char ** argv) {
+    devel::init( argc, argv);
+    protocols::bootcamp::BootCampMoverOP boot_camp_mover(new protocols::bootcamp::BootCampMover());
+    protocols::jd2::JobDistributor::get_instance()->go(boot_camp_mover);
+}
 
 //int main ( int argc, char ** argv) {
 //
